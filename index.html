@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Jurnal Guru</title>
+  <title>Jurnal Guru (Debug)</title>
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore-compat.js"></script>
 </head>
@@ -18,6 +18,8 @@
     <textarea id="refleksi" placeholder="Refleksi"></textarea><br>
     <button type="submit">Simpan</button>
   </form>
+
+  <p id="status" style="color: red;"></p>
 
   <h3>Daftar Jurnal</h3>
   <ul id="jurnalList"></ul>
@@ -36,35 +38,46 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    document.getElementById("jurnalForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      await db.collection("jurnal").add({
-        nama_guru: document.getElementById("nama_guru").value,
-        tanggal: document.getElementById("tanggal").value,
-        kelas: document.getElementById("kelas").value,
-        mapel: document.getElementById("mapel").value,
-        jam_ke: document.getElementById("jam_ke").value,
-        materi: document.getElementById("materi").value,
-        refleksi: document.getElementById("refleksi").value,
-        waktu_input: new Date()
-      });
-
-      alert("Jurnal disimpan!");
-      document.getElementById("jurnalForm").reset();
-      tampilkanJurnal();
-    });
-
     async function tampilkanJurnal() {
       const list = document.getElementById("jurnalList");
       list.innerHTML = "";
 
-      const snapshot = await db.collection("jurnal").orderBy("tanggal", "desc").get();
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        list.innerHTML += `<li><b>${data.tanggal}</b> - ${data.nama_guru} - ${data.kelas} - ${data.mapel} - Jam ke-${data.jam_ke}<br><i>${data.materi}</i></li><hr>`;
-      });
+      try {
+        const snapshot = await db.collection("jurnal").orderBy("tanggal", "desc").get();
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          list.innerHTML += `<li><b>${data.tanggal}</b> - ${data.nama_guru} - ${data.kelas} - ${data.mapel} - Jam ke-${data.jam_ke}<br><i>${data.materi}</i></li><hr>`;
+        });
+      } catch (error) {
+        console.error("Gagal tampilkan data:", error);
+        document.getElementById("status").textContent = "Gagal tampilkan data: " + error.message;
+      }
     }
+
+    document.getElementById("jurnalForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const status = document.getElementById("status");
+      status.textContent = "";
+
+      try {
+        await db.collection("jurnal").add({
+          nama_guru: document.getElementById("nama_guru").value,
+          tanggal: document.getElementById("tanggal").value,
+          kelas: document.getElementById("kelas").value,
+          mapel: document.getElementById("mapel").value,
+          jam_ke: document.getElementById("jam_ke").value,
+          materi: document.getElementById("materi").value,
+          refleksi: document.getElementById("refleksi").value,
+          waktu_input: new Date()
+        });
+        alert("Jurnal disimpan!");
+        document.getElementById("jurnalForm").reset();
+        tampilkanJurnal();
+      } catch (error) {
+        console.error("Gagal simpan jurnal:", error);
+        status.textContent = "Gagal simpan jurnal: " + error.message;
+      }
+    });
 
     tampilkanJurnal();
   </script>
