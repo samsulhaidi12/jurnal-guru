@@ -37,7 +37,7 @@
       apiKey: "AIzaSyD-F64-CTbjC4TEjkSTcza8lJRmytUGGtU",
       authDomain: "jurnal-guru-app.firebaseapp.com",
       projectId: "jurnal-guru-app",
-      storageBucket: "jurnal-guru-app.firebasestorage.app",
+      storageBucket: "jurnal-guru-app.appspot.com",
       messagingSenderId: "132021751020",
       appId: "1:132021751020:web:732628c375933132d6a9c9",
       measurementId: "G-R1FFDHE8HN"
@@ -64,6 +64,7 @@
           waktu_input: new Date()
         });
         alert("Jurnal disimpan!");
+        console.log("Data berhasil dikirim ke Firestore.");
         document.getElementById("jurnalForm").reset();
         tampilkanJurnal();
       } catch (error) {
