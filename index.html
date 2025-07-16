@@ -1,7 +1,8 @@
+
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Jurnal Guru + Filter + Excel</title>
+  <title>Jurnal Guru + Filter + Excel + Hapus</title>
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -16,7 +17,7 @@
     <input type="number" id="jam_ke" placeholder="Jam Ke-" required><br>
     <textarea id="materi" placeholder="Materi" required></textarea><br>
     <textarea id="refleksi" placeholder="Refleksi"></textarea><br>
-    <textarea id="absen" placeholder="Siswa Tidak Hadir (misal: Andi, Sari, Budi)"></textarea><br>
+    <textarea id="absen" placeholder="Siswa Tidak Hadir"></textarea><br>
     <button type="submit">Simpan</button>
   </form>
 
@@ -64,7 +65,6 @@
           absen: document.getElementById("absen").value,
           waktu_input: new Date()
         });
-
         alert("Jurnal disimpan!");
         document.getElementById("jurnalForm").reset();
         tampilkanJurnal();
@@ -87,18 +87,19 @@
         const snapshot = await db.collection("jurnal").orderBy("tanggal", "desc").get();
         snapshot.forEach(doc => {
           const data = doc.data();
+          semuaData.push({ ...data, id: doc.id });
           if (
             (!filterNama || data.nama_guru.toLowerCase().includes(filterNama)) &&
             (!filterStart || data.tanggal >= filterStart) &&
             (!filterEnd || data.tanggal <= filterEnd)
           ) {
-            semuaData.push(data);
             list.innerHTML += `
               <li>
                 <b>${data.tanggal}</b> - ${data.nama_guru} - ${data.kelas} - ${data.mapel} - Jam ke-${data.jam_ke}<br>
-                <i><b>Materi:</b> ${data.materi}</i><br>
-                <i><b>Refleksi:</b> ${data.refleksi || "-"}</i><br>
-                <i><b>Siswa Tidak Hadir:</b> ${data.absen || "-"}</i>
+                <i>${data.materi}</i><br>
+                <small><b>Refleksi:</b> ${data.refleksi || "-"}</small><br>
+                <small><b>Siswa Tidak Hadir:</b> ${data.absen || "-"}</small><br>
+                <button onclick="hapusJurnal('${doc.id}')">Hapus</button>
               </li><hr>
             `;
           }
@@ -109,12 +110,25 @@
       }
     }
 
+    async function hapusJurnal(id) {
+      const konfirmasi = confirm("Apakah Anda yakin ingin menghapus jurnal ini?");
+      if (!konfirmasi) return;
+
+      try {
+        await db.collection("jurnal").doc(id).delete();
+        alert("Jurnal berhasil dihapus!");
+        tampilkanJurnal();
+      } catch (error) {
+        console.error("Gagal hapus jurnal:", error);
+        alert("Gagal hapus jurnal: " + error.message);
+      }
+    }
+
     function exportToExcel() {
       if (semuaData.length === 0) {
         alert("Tidak ada data untuk diekspor.");
         return;
       }
-
       const dataSheet = semuaData.map((item, index) => ({
         No: index + 1,
         Tanggal: item.tanggal,
@@ -124,9 +138,8 @@
         Jam_Ke: item.jam_ke,
         Materi: item.materi,
         Refleksi: item.refleksi,
-        Absen: item.absen
+        Absen: item.absen ?? ""
       }));
-
       const worksheet = XLSX.utils.json_to_sheet(dataSheet);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "JurnalGuru");
