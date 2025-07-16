@@ -2,9 +2,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Jurnal Guru (Debug)</title>
+  <title>Jurnal Guru + Filter + Excel</title>
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
   <h2>Form Jurnal Guru</h2>
@@ -19,6 +20,13 @@
     <button type="submit">Simpan</button>
   </form>
 
+  <hr>
+  <h3>Filter & Export</h3>
+  <label>Nama Guru: <input type="text" id="filterNama"></label>
+  <label>Tanggal Mulai: <input type="date" id="filterStart"></label>
+  <label>Tanggal Akhir: <input type="date" id="filterEnd"></label>
+  <button onclick="tampilkanJurnal()">Terapkan Filter</button>
+  <button onclick="exportToExcel()">Export ke Excel</button>
   <p id="status" style="color: red;"></p>
 
   <h3>Daftar Jurnal</h3>
@@ -37,22 +45,7 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-
-    async function tampilkanJurnal() {
-      const list = document.getElementById("jurnalList");
-      list.innerHTML = "";
-
-      try {
-        const snapshot = await db.collection("jurnal").orderBy("tanggal", "desc").get();
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          list.innerHTML += `<li><b>${data.tanggal}</b> - ${data.nama_guru} - ${data.kelas} - ${data.mapel} - Jam ke-${data.jam_ke}<br><i>${data.materi}</i></li><hr>`;
-        });
-      } catch (error) {
-        console.error("Gagal tampilkan data:", error);
-        document.getElementById("status").textContent = "Gagal tampilkan data: " + error.message;
-      }
-    }
+    let semuaData = [];
 
     document.getElementById("jurnalForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -78,6 +71,55 @@
         status.textContent = "Gagal simpan jurnal: " + error.message;
       }
     });
+
+    async function tampilkanJurnal() {
+      const list = document.getElementById("jurnalList");
+      list.innerHTML = "";
+      semuaData = [];
+
+      const filterNama = document.getElementById("filterNama").value.toLowerCase();
+      const filterStart = document.getElementById("filterStart").value;
+      const filterEnd = document.getElementById("filterEnd").value;
+
+      try {
+        const snapshot = await db.collection("jurnal").orderBy("tanggal", "desc").get();
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (
+            (!filterNama || data.nama_guru.toLowerCase().includes(filterNama)) &&
+            (!filterStart || data.tanggal >= filterStart) &&
+            (!filterEnd || data.tanggal <= filterEnd)
+          ) {
+            semuaData.push(data);
+            list.innerHTML += `<li><b>${data.tanggal}</b> - ${data.nama_guru} - ${data.kelas} - ${data.mapel} - Jam ke-${data.jam_ke}<br><i>${data.materi}</i></li><hr>`;
+          }
+        });
+      } catch (error) {
+        console.error("Gagal tampilkan data:", error);
+        document.getElementById("status").textContent = "Gagal tampilkan data: " + error.message;
+      }
+    }
+
+    function exportToExcel() {
+      if (semuaData.length === 0) {
+        alert("Tidak ada data untuk diekspor.");
+        return;
+      }
+      const dataSheet = semuaData.map((item, index) => ({
+        No: index + 1,
+        Tanggal: item.tanggal,
+        Nama_Guru: item.nama_guru,
+        Kelas: item.kelas,
+        Mapel: item.mapel,
+        Jam_Ke: item.jam_ke,
+        Materi: item.materi,
+        Refleksi: item.refleksi
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(dataSheet);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "JurnalGuru");
+      XLSX.writeFile(workbook, "jurnal_guru.xlsx");
+    }
 
     tampilkanJurnal();
   </script>
